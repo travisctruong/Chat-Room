@@ -1,8 +1,0 @@
-/**
- * 
- */
-/**
- * 
- */
-module Chat_Application {
-}
