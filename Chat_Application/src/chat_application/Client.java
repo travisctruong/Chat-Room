@@ -16,57 +16,61 @@ public class Client implements Runnable {
 	@Override
 	public void run() {
 		try {
-			client = new Socket("127.0.0.1", 2424);
-			out = new PrintWriter(client.getOutputStream(), true);
-			in = new BufferedReader(new InputStreamReader(client.getInputStream()));
+			client = new Socket("127.0.0.1", 2424);                   // Loop-back address
+			out = new PrintWriter(client.getOutputStream(), true);                              // "out" sends data to "in"
+			in = new BufferedReader(new InputStreamReader(client.getInputStream()));            
 			
-			InputHandler inHandler = new InputHandler();
-			Thread t = new Thread(inHandler);
-			t.start();
+			MessageHandler inHandler = new MessageHandler();            
+			Thread thread = new Thread(inHandler);
+			thread.start();
 			
-			String inMessage;
-			while ((inMessage = in.readLine()) != null) {
-				System.out.println(inMessage);
+			String clientBroadcast;
+			while ((clientBroadcast = in.readLine()) != null) {           // Will wait (block) until message is received - continues working until buffered reader is closed
+				System.out.println(clientBroadcast);
 			}
-		} catch (IOException e) {
-			
+		} 
+		
+		catch (IOException e) {
+			clientShutdown();
 		}
 	}
 	
-	public void shutdown() {
+	public void clientShutdown() {
 		done = true;
 		try {
 			in.close();
 			out.close();
-			if (!client.isClosed()) {
-				client.close();
-			}
-		} catch (IOException e) {
+			client.close();
+		} 
+		
+		catch (IOException e) {
 			
 		}
 	}
 	
-	class InputHandler implements Runnable {
+	class MessageHandler implements Runnable {
 		
 		@Override
 		public void run() {
 			try {
-				BufferedReader inReader = new BufferedReader(new InputStreamReader(System.in));
+				BufferedReader standardInput = new BufferedReader(new InputStreamReader(System.in));    
 				while (!done) {
-					String message = inReader.readLine();
-					if (message.equals("/quit")) {
-						out.println(message);
-						inReader.close();
-						shutdown();
+					String clientMessage = standardInput.readLine();          // Message from standard input gets sent to "out"
+					
+					if (clientMessage.equals("/quit")) {            // Leave server
+						out.println(clientMessage);
+						standardInput.close();
+						clientShutdown();
 					}
 					
-					else {
-						out.println(message);
+					else {                                    // Send message to room
+						out.println(clientMessage);
 					}
-					
 				}
-			} catch (IOException e) {
-				shutdown();
+			} 
+			
+			catch (IOException e) {
+				clientShutdown();
 			}
 		}
 	}
