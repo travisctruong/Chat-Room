@@ -17,7 +17,7 @@ public class Client implements Runnable {
 	public void run() {
 		try {
 			client = new Socket("127.0.01", 2424);                   // Loop-back address
-			out = new PrintWriter(client.getOutputStream(), true);                              // "out" sends data to "in"
+			out = new PrintWriter(client.getOutputStream(), true);                              // IO between client and server
 			in = new BufferedReader(new InputStreamReader(client.getInputStream()));            
 			
 			MessageHandler inHandler = new MessageHandler();            
@@ -55,7 +55,7 @@ public class Client implements Runnable {
 			try {
 				BufferedReader standardInput = new BufferedReader(new InputStreamReader(System.in));    
 				while (!done) {
-					String clientMessage = standardInput.readLine();          // Message from standard input gets sent to "out"
+					String clientMessage = standardInput.readLine();          // Message from standard input gets sent to server via "out"
 					
 					if (clientMessage.equals("/quit")) {            // Leave server
 						out.println(clientMessage);

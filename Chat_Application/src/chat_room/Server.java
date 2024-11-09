@@ -81,7 +81,7 @@ public class Server implements Runnable {
 				String username = in.readLine();
 				System.out.println(username);
 				while (username.isEmpty() || username.contains(" ") || username.contains("\t") || username.contains("\n")) {
-					out.println("\nUsername without spaces required: ");
+					out.println("\nUsername cannot be blank or contain spaces\n");
 					username = in.readLine();
 				}
 				
