@@ -1,4 +1,4 @@
-package chat_application;
+package chat_room;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -22,7 +22,7 @@ public class Server implements Runnable {
 	}
 
 	@Override
-	public void run() {                                  // Running on port 2424
+	public void run() {                                  // Hosted on port 2424
 		try {
 			server = new ServerSocket(2424);
 			pool = Executors.newCachedThreadPool();      // Thread pool handles each client automatically by allocating clients to available threads
@@ -74,13 +74,14 @@ public class Server implements Runnable {
 		@Override
 		public void run() {
 			try {     
-				out = new PrintWriter(client.getOutputStream(), true);                     // IO client streams
+				out = new PrintWriter(client.getOutputStream(), true);                     // IO between client and server
 				in = new BufferedReader(new InputStreamReader(client.getInputStream()));
 				
 				out.println("Enter a username: ");                                         // Name initialization
 				String username = in.readLine();
-				while (username.isBlank()) {
-					out.println("\nUsername required: ");
+				System.out.println(username);
+				while (username.isEmpty() || username.contains(" ") || username.contains("\t") || username.contains("\n")) {
+					out.println("\nUsername without spaces required: ");
 					username = in.readLine();
 				}
 				
@@ -88,23 +89,32 @@ public class Server implements Runnable {
 				broadcast("\n" + username + " has joined!\n");
 				String message;
 				while ((message = in.readLine()) != null) {                 // Will wait (blocking) until message is received - continues running until buffered reader is closed
+					String[] splitMessage = message.split(" ", 2);
 					
-					if (message.startsWith("/username")) {                                                        // Change name
-						String[] splitMessage = message.split(" ", 2);
-						if (splitMessage.length == 2 && !splitMessage[1].isBlank()) {
+					if (splitMessage[0].equals("/username")) {                                                        // Change name
+						if (splitMessage.length == 2 && !splitMessage[1].isEmpty() && !splitMessage[1].contains(" ") && !splitMessage[1].contains("\t") && !splitMessage[1].contains("\n")) {
 							broadcast("\n" + username + " changed username to " + splitMessage[1] + "\n");
 							System.out.println(username + " changed username to " + splitMessage[1]);
 							username = splitMessage[1];
 						}
 						else {
-							out.println("\nNo username was entered\n");
+							out.println("\nUsername cannot be blank or contain spaces\n");
 						}
 					}
 					
-					else if (message.startsWith("/quit")) {                                                       // Leave server
-						broadcast("\n" + username + " left the room\n");
-						System.out.println(username + " has left the room");
-						clientShutdown();
+					else if (splitMessage[0].equals("/quit")) {                                                       // Leave server
+						if (splitMessage.length == 1) {
+							broadcast("\n" + username + " left the room\n");
+							System.out.println(username + " has left the room");
+							clientShutdown();
+						}
+						else {
+							out.println("\nInvalid command\n");
+						}
+					}
+					
+					else if (splitMessage[0].startsWith("/")) { 													// Command attempt
+						out.println("\nInvalid command\n");
 					}
 					
 					else {                                                                                        // Send message to room

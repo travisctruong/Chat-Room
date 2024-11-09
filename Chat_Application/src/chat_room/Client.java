@@ -1,4 +1,4 @@
-package chat_application;
+package chat_room;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -16,7 +16,7 @@ public class Client implements Runnable {
 	@Override
 	public void run() {
 		try {
-			client = new Socket("127.0.0.1", 2424);                   // Loop-back address
+			client = new Socket("127.0.01", 2424);                   // Loop-back address
 			out = new PrintWriter(client.getOutputStream(), true);                              // "out" sends data to "in"
 			in = new BufferedReader(new InputStreamReader(client.getInputStream()));            
 			
