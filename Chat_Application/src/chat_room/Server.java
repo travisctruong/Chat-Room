@@ -81,6 +81,7 @@ public class Server implements Runnable {
 				out = new PrintWriter(client.getOutputStream(), true);                     // IO between client and server
 				in = new BufferedReader(new InputStreamReader(client.getInputStream()));
 				
+				out.println("Welcome! Use /help to display list of commands");
 				out.println("Enter a username: ");                                         // Name initialization
 				String username = in.readLine();
 				while (username.isEmpty() || username.contains(" ") || username.contains("\t") || username.contains("\n")) {
@@ -140,6 +141,18 @@ public class Server implements Runnable {
 					else if (splitMessage[0].equals("/room")) {                                                     // Display room number 
 						if (splitMessage.length == 1) {
 							out.println("\nYou are in room " + roomNum);
+						}
+						else {
+							out.println("\nInvalid command\n");
+						}
+					}
+					
+					else if (splitMessage[0].equals("/help")) {
+						if (splitMessage.length == 1) {
+							out.println("\n/username --- USAGE: /username {name}");
+							out.println("/quit");
+							out.println("/join --- USAGE: /join {room_number}");
+							out.println("/room\n");
 						}
 						else {
 							out.println("\nInvalid command\n");
