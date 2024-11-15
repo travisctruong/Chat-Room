@@ -32,9 +32,7 @@ public class Server implements Runnable {
 				pool.execute(handler);
 				connections.add(handler);
 			}
-		} 
-		
-		catch (IOException e) {
+		} catch (IOException e) {
 			serverShutdown();
 		}
 	}
@@ -55,11 +53,7 @@ public class Server implements Runnable {
 			for (ClientHandler handler : connections) {
 				handler.clientShutdown();
 			}
-		} 
-		
-		catch (IOException e) {
-			
-		}
+		} catch (IOException e) {}
 	}
 	
 	
@@ -128,10 +122,10 @@ public class Server implements Runnable {
 								else {
 									out.println("\nEnter a room number between 0-100\n");
 								}
-							}
-							catch (NumberFormatException e) {
+							} catch (NumberFormatException e) {
 								out.println("\nEnter a room number between 0-100\n");
 							}
+							
 						}
 						else {
 							out.println("\nEnter a room number between 0-100\n");
@@ -167,9 +161,7 @@ public class Server implements Runnable {
 						broadcast(username + ": " + message, roomNum);
 					}
 				}
-			}
-			
-			catch(IOException e) {
+			} catch(IOException e) {
 				clientShutdown();
 			}
 		}
@@ -183,11 +175,7 @@ public class Server implements Runnable {
 				in.close();
 				out.close();
 				client.close();
-			}
-			
-			catch (IOException e) {
-				
-			}
+			} catch (IOException e) {}
 		}
 		
 		public int roomGetter() {

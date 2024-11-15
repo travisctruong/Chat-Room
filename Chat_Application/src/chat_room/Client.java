@@ -28,9 +28,7 @@ public class Client implements Runnable {
 			while ((clientBroadcast = in.readLine()) != null) {           // Will wait (block) until message is received - continues working until buffered reader is closed
 				System.out.println(clientBroadcast);
 			}
-		} 
-		
-		catch (IOException e) {
+		} catch (IOException e) {
 			clientShutdown();
 		}
 	}
@@ -41,11 +39,7 @@ public class Client implements Runnable {
 			in.close();
 			out.close();
 			client.close();
-		} 
-		
-		catch (IOException e) {
-			
-		}
+		} catch (IOException e) {}
 	}
 	
 	class MessageHandler implements Runnable {
@@ -67,9 +61,7 @@ public class Client implements Runnable {
 						out.println(clientMessage);
 					}
 				}
-			} 
-			
-			catch (IOException e) {
+			} catch (IOException e) {
 				clientShutdown();
 			}
 		}
