@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -16,9 +17,11 @@ public class Server implements Runnable {
 	private ServerSocket server;
 	private boolean flag;
 	private ExecutorService pool;
+	private Database database;
 	
-	public Server() {
+	private Server() {
 		connections = new ArrayList<>();    // List of clients
+		database = new Database();
 	}
 
 	@Override
@@ -26,6 +29,7 @@ public class Server implements Runnable {
 		try {
 			server = new ServerSocket(2424);
 			pool = Executors.newCachedThreadPool();      // Thread pool handles each client automatically by allocating clients to available threads
+			database.createUserTable();
 			while (!flag) {
 				Socket client = server.accept();                                 // Waits (blocking) to accept clients and answer client requests
 				ClientHandler handler = new ClientHandler(client);
@@ -34,10 +38,12 @@ public class Server implements Runnable {
 			}
 		} catch (IOException e) {
 			serverShutdown();
+		} catch (SQLException e) {
+			System.out.println(e.getMessage());
 		}
 	}
 	
-	public void broadcast(String message, int roomNum) {               // Sends message from client to all other clients
+	private void broadcast(String message, int roomNum) {               // Sends message from client to all other clients
 		for (ClientHandler handler : connections) {
 			if (handler.roomGetter() == roomNum) {
 				handler.receiveMessage(message);
@@ -45,7 +51,7 @@ public class Server implements Runnable {
 		}
 	}
 	
-	public void serverShutdown() {
+	private void serverShutdown() {
 		try {
 			flag = true;
 			pool.shutdown();
@@ -53,6 +59,7 @@ public class Server implements Runnable {
 			for (ClientHandler handler : connections) {
 				handler.clientShutdown();
 			}
+			database.connectionShutdown();
 		} catch (IOException e) {}
 	}
 	
@@ -64,9 +71,8 @@ public class Server implements Runnable {
 		private PrintWriter out;
 		private int roomNum;
 		
-		public ClientHandler(Socket client) {
+		private ClientHandler(Socket client) {
 			this.client = client;
-			this.roomNum = 1;
 		}
 
 		@Override
@@ -75,16 +81,56 @@ public class Server implements Runnable {
 				out = new PrintWriter(client.getOutputStream(), true);                     // IO between client and server
 				in = new BufferedReader(new InputStreamReader(client.getInputStream()));
 				
-				out.println("Welcome! Use /help to display list of commands");
-				out.println("Enter a username: ");                                         // Name initialization
-				String username = in.readLine();
-				while (username.isEmpty() || username.contains(" ") || username.contains("\t") || username.contains("\n")) {
-					out.println("\nUsername cannot be blank or contain spaces\n");
+				String username = null;
+				String password;
+				Boolean flag2 = true;
+				while (flag2) {
+					out.println("Enter username: ");                                         // Name initialization
 					username = in.readLine();
-				}
+					
+					if (database.checkUsername(username)) {
+						if (database.checkStatus(username, "offline")) {
+							out.println("\nWelcome back " + username + ", please enter password: ");
+							password = in.readLine();
+							
+							if (password.equals("/quit")) {
+								clientShutdown();
+								return;
+							}
+							if (!database.checkPassword(username, password)) {
+								out.println("\nERROR: Incorrect password\n");
+							}
+							else {
+								flag2 = false;
+							}
+						}
+						else {
+							out.println("\nERROR: Account in use\n");
+						}
+						
+					}
+					else {
+						if (username.isEmpty() || username.contains(" ") || username.contains("\t") || username.contains("\n")) {
+							out.println("\nERROR: Username cannot be blank or contain spaces\n");
+						}
+						else {
+							out.println("\nEnter a password: ");
+							password = in.readLine();
+							if (password.equals("/quit")){
+								clientShutdown();
+								return;
+							}
+							database.insertUser(username, password);
+							flag2 = false;
+						}
+					}
+				}                          
 				
 				System.out.println(username + " connected");
+				database.updateStatus(username, "online");
+				roomNum = 1;
 				broadcast("\n" + username + " has joined!\n", roomNum);
+				out.println("Welcome! Use /help to display list of commands");
 				String message;
 				while ((message = in.readLine()) != null) {                 // Will wait (blocking) until message is received - continues running until buffered reader is closed
 					String[] splitMessage = message.split(" ", 2);
@@ -104,6 +150,7 @@ public class Server implements Runnable {
 						if (splitMessage.length == 1) {
 							broadcast("\n" + username + " left the room\n", roomNum);
 							System.out.println(username + " has left the room");
+							database.updateStatus(username, "offline");
 							clientShutdown();
 						}
 						else {
@@ -163,14 +210,16 @@ public class Server implements Runnable {
 				}
 			} catch(IOException e) {
 				clientShutdown();
+			} catch (SQLException e) {
+				System.out.println(e.getMessage());
 			}
 		}
 		
-		public void receiveMessage(String message) {       // Get client messages
+		private void receiveMessage(String message) {       // Get client messages
 			out.println(message);
 		}
 		
-		public void clientShutdown() {
+		private void clientShutdown() {
 			try {
 				in.close();
 				out.close();
@@ -178,7 +227,7 @@ public class Server implements Runnable {
 			} catch (IOException e) {}
 		}
 		
-		public int roomGetter() {
+		private int roomGetter() {
 			return this.roomNum;
 		}
 	}

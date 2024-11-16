@@ -9,7 +9,7 @@ import java.sql.Statement;
 
 public class Database {
 	
-	Connection conn;
+	private Connection conn;
 	
 	public Database() {
 		try {
@@ -30,18 +30,54 @@ public class Database {
 		table.executeUpdate(tableSQL);
 	}
 	
-	public void insertUsername(String username, String password) throws SQLException {
-		String usernameSQL = "INSERT INTO usernames (username, password) VALUES (?, ?)";
-		PreparedStatement usernameEntry = conn.prepareStatement(usernameSQL);
-		usernameEntry.setString(1, username);
-		usernameEntry.setString(1, password);
-		usernameEntry.executeUpdate();
+	public void insertUser(String username, String password) throws SQLException {
+		String usernameSQL = "INSERT INTO usernames (username, password) VALUES (?, ?);";
+		PreparedStatement userEntry = conn.prepareStatement(usernameSQL);
+		userEntry.setString(1, username);
+		userEntry.setString(2, password);
+		userEntry.executeUpdate();
 	}
 	
-	public boolean checkUser(String username) throws SQLException {
-		String checkSQL = "SELECT * FROM usernames WHERE username=?";
+	public void updateStatus(String username, String status) throws SQLException {
+		String statusSQL = "UPDATE usernames SET status=? WHERE username=?;";
+		PreparedStatement statusEntry = conn.prepareStatement(statusSQL);
+		statusEntry.setString(1, status);
+		statusEntry.setString(2, username);
+		statusEntry.executeUpdate();	
+	}
+	
+	public boolean checkUsername(String username) throws SQLException {
+		String checkSQL = "SELECT * FROM usernames WHERE username=?;";
 		PreparedStatement check = conn.prepareStatement(checkSQL);
 		check.setString(1, username);
+		ResultSet result = check.executeQuery();
+		
+		if (result.next() && result.getInt(1) > 0) {
+			return true;
+		}
+		
+		return false;
+	}
+	
+	public boolean checkPassword(String username, String password) throws SQLException {
+		String checkSQL = "SELECT * FROM usernames WHERE username=? AND password=?;";
+		PreparedStatement check = conn.prepareStatement(checkSQL);
+		check.setString(1, username);
+		check.setString(2, password);
+		ResultSet result = check.executeQuery();
+		
+		if (result.next() && result.getInt(1) > 0) {
+			return true;
+		}
+		
+		return false;
+	}
+	
+	public boolean checkStatus(String username, String status) throws SQLException {
+		String checkSQL = "SELECT * FROM usernames WHERE username=? AND status=?;";
+		PreparedStatement check = conn.prepareStatement(checkSQL);
+		check.setString(1, username);
+		check.setString(2, status);
 		ResultSet result = check.executeQuery();
 		
 		if (result.next() && result.getInt(1) > 0) {
