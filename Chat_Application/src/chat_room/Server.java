@@ -22,6 +22,7 @@ public class Server implements Runnable {
 	private Server() {
 		connections = new ArrayList<>();    // List of clients
 		database = new Database();
+//		Runtime.getRuntime().addShutdownHook(new Thread(() -> serverShutdown()));
 	}
 
 	@Override
@@ -37,6 +38,7 @@ public class Server implements Runnable {
 				connections.add(handler);
 			}
 		} catch (IOException e) {
+			System.out.println("quit");
 			serverShutdown();
 		} catch (SQLException e) {
 			System.out.println(e.getMessage());
@@ -70,6 +72,7 @@ public class Server implements Runnable {
 		private BufferedReader in;
 		private PrintWriter out;
 		private int roomNum;
+		private String username;
 		
 		private ClientHandler(Socket client) {
 			this.client = client;
@@ -81,13 +84,16 @@ public class Server implements Runnable {
 				out = new PrintWriter(client.getOutputStream(), true);                     // IO between client and server
 				in = new BufferedReader(new InputStreamReader(client.getInputStream()));
 				
-				String username = null;
 				String password;
 				Boolean flag2 = true;
 				while (flag2) {
 					out.println("Enter username: ");                                         // Name initialization
 					username = in.readLine();
 					
+					if (username.equals("/quit")) {
+						clientShutdown();
+						return;
+					}
 					if (database.checkUsername(username)) {
 						if (database.checkStatus(username, "offline")) {
 							out.println("\nWelcome back " + username + ", please enter password: ");
@@ -116,17 +122,22 @@ public class Server implements Runnable {
 						else {
 							out.println("\nEnter a password: ");
 							password = in.readLine();
-							if (password.equals("/quit")){
-								clientShutdown();
-								return;
+							if (password.isEmpty() || password.contains(" ") || password.contains("\t") || password.contains("\n")) {
+								out.println("\nERROR: Password cannot be blank or contain spaces\n");
 							}
-							database.insertUser(username, password);
-							flag2 = false;
+							else {
+								if (password.equals("/quit")){
+									clientShutdown();
+									return;
+								}
+								database.insertUser(username, password);
+								flag2 = false;
+							}
 						}
 					}
 				}                          
 				
-				System.out.println(username + " connected");
+				System.out.println(username + " has connected");
 				database.updateStatus(username, "online");
 				roomNum = 1;
 				broadcast("\n" + username + " has joined!\n", roomNum);
@@ -137,24 +148,78 @@ public class Server implements Runnable {
 					
 					if (splitMessage[0].equals("/username")) {                                                        // Change name
 						if (splitMessage.length == 2 && !splitMessage[1].isEmpty() && !splitMessage[1].contains(" ") && !splitMessage[1].contains("\t") && !splitMessage[1].contains("\n")) {
-							broadcast("\n" + username + " changed username to " + splitMessage[1] + "\n", roomNum);
-							System.out.println(username + " changed username to " + splitMessage[1]);
-							username = splitMessage[1];
+							if (splitMessage[1].equals("/quit")) {
+								out.println("\nERROR: Illegal username\n");
+								continue;
+							}
+							if (database.checkUsername(splitMessage[1])) {
+								out.println("\nERROR: Username already taken\n");
+							}
+							else {
+								out.println("\nPlease confirm password: ");
+								String temp = in.readLine();
+								if (temp.equals("/quit")) {
+									database.updateStatus(username, "offline");
+									clientShutdown();
+									return;
+								}
+								if (!database.checkPassword(username, temp)) {
+									out.println("\nERROR: Incorrect password\n");
+								}
+								else {
+									int id = database.getID(username);
+									if (id == -1) {
+										out.println("\nERROR: Could not fetch ID\n");
+									}
+									else {
+										broadcast("\n" + username + " changed username to " + splitMessage[1] + "\n", roomNum);
+										System.out.println(username + " changed username to " + splitMessage[1]);
+										database.updateUsername(splitMessage[1], temp, id);
+										username = splitMessage[1];
+									}
+								}
+							}
 						}
 						else {
-							out.println("\nUsername cannot be blank or contain spaces\n");
+							out.println("\nERROR: No username entered or contains spaces\n");
+						}
+					}
+					
+					else if (splitMessage[0].equals("/password")) {
+						if (splitMessage.length == 2 && !splitMessage[1].isEmpty() && !splitMessage[1].contains(" ") && !splitMessage[1].contains("\t") && !splitMessage[1].contains("\n")) {
+							if (splitMessage[1].equals("/quit")) {
+								out.println("\nERROR: Illegal password\n");
+								continue;
+							}
+							out.println("\nPlease confirm current password: ");
+							String temp = in.readLine();
+							if (temp.equals("/quit")) {
+								database.updateStatus(username, "offline");
+								clientShutdown();
+								return;
+							}
+							if (!database.checkPassword(username, temp)) {
+								out.println("\nERROR: Incorrect password\n");
+							}
+							else {
+								out.println("\n" + username + " changed password\n");
+								database.updatePassword(username, splitMessage[1]);
+							}
+						}
+						else {
+							out.println("\nERROR: No password entered or contains spaces\n");
 						}
 					}
 					
 					else if (splitMessage[0].equals("/quit")) {                                                       // Leave server
 						if (splitMessage.length == 1) {
-							broadcast("\n" + username + " left the room\n", roomNum);
+							broadcast("\n" + username + " has left the room\n", roomNum);
 							System.out.println(username + " has left the room");
 							database.updateStatus(username, "offline");
 							clientShutdown();
 						}
 						else {
-							out.println("\nInvalid command\n");
+							out.println("\nERROR: Too many arguments\n");
 						}
 					}
 					
@@ -163,19 +228,19 @@ public class Server implements Runnable {
 							try {
 								int num = Integer.parseInt(splitMessage[1].trim());
 								if (num > 0 && num < 100) {
-									broadcast("\n" + username + " has entered room " + roomNum, roomNum);
+									broadcast("\n" + username + " has entered room " + roomNum + "\n", roomNum);
 									roomNum = num;
 								}
 								else {
-									out.println("\nEnter a room number between 0-100\n");
+									out.println("\nERROR: Enter a room number between 0-100\n");
 								}
 							} catch (NumberFormatException e) {
-								out.println("\nEnter a room number between 0-100\n");
+								out.println("\nERROR: Enter a room number between 0-100\n");
 							}
 							
 						}
 						else {
-							out.println("\nEnter a room number between 0-100\n");
+							out.println("\nERROR: Enter a room number between 0-100\n");
 						}
 					}
 					
@@ -184,24 +249,25 @@ public class Server implements Runnable {
 							out.println("\nYou are in room " + roomNum);
 						}
 						else {
-							out.println("\nInvalid command\n");
+							out.println("\nERROR: Too many arguments\n");
 						}
 					}
 					
 					else if (splitMessage[0].equals("/help")) {
 						if (splitMessage.length == 1) {
 							out.println("\n/username --- USAGE: /username {name}");
+							out.println("/password --- USAGE: /password {password}");
 							out.println("/quit");
 							out.println("/join --- USAGE: /join {room_number}");
 							out.println("/room\n");
 						}
 						else {
-							out.println("\nInvalid command\n");
+							out.println("\nERROR: Too many arguments\n");
 						}
 					}
 					
 					else if (splitMessage[0].startsWith("/")) { 													// Command attempt
-						out.println("\nInvalid command\n");
+						out.println("\nERROR: Invalid command\n");
 					}
 					
 					else {                                                                                        // Send message to room
@@ -227,6 +293,19 @@ public class Server implements Runnable {
 			} catch (IOException e) {}
 		}
 		
+//		private void clientShutdown() {
+//			try {
+//				try {
+//					database.updateStatus(this.username, "offline");
+//				} catch (SQLException e) {
+//					System.out.println(e.getMessage());
+//				}
+//				in.close();
+//				out.close();
+//				client.close();
+//			} catch (IOException e) {}
+//		}
+//		
 		private int roomGetter() {
 			return this.roomNum;
 		}

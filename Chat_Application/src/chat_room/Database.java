@@ -31,16 +31,33 @@ public class Database {
 	}
 	
 	public void insertUser(String username, String password) throws SQLException {
-		String usernameSQL = "INSERT INTO usernames (username, password) VALUES (?, ?);";
-		PreparedStatement userEntry = conn.prepareStatement(usernameSQL);
+		String insertSQL = "INSERT INTO usernames (username, password) VALUES (?, ?);";
+		PreparedStatement userEntry = conn.prepareStatement(insertSQL);
 		userEntry.setString(1, username);
 		userEntry.setString(2, password);
 		userEntry.executeUpdate();
 	}
 	
+	public void updateUsername(String username, String password, int id) throws SQLException {
+		String updateSQL = "UPDATE usernames SET username=? WHERE password=? AND id=?;";
+		PreparedStatement usernameEntry = conn.prepareStatement(updateSQL);
+		usernameEntry.setString(1, username);
+		usernameEntry.setString(2, password);
+		usernameEntry.setInt(3, id);
+		usernameEntry.executeUpdate();	
+	}
+	
+	public void updatePassword(String username, String password) throws SQLException {
+		String updateSQL = "UPDATE usernames SET password=? WHERE username=?;";
+		PreparedStatement passwordEntry = conn.prepareStatement(updateSQL);
+		passwordEntry.setString(1, password);
+		passwordEntry.setString(2, username);
+		passwordEntry.executeUpdate();	
+	}
+	
 	public void updateStatus(String username, String status) throws SQLException {
-		String statusSQL = "UPDATE usernames SET status=? WHERE username=?;";
-		PreparedStatement statusEntry = conn.prepareStatement(statusSQL);
+		String updateSQL = "UPDATE usernames SET status=? WHERE username=?;";
+		PreparedStatement statusEntry = conn.prepareStatement(updateSQL);
 		statusEntry.setString(1, status);
 		statusEntry.setString(2, username);
 		statusEntry.executeUpdate();	
@@ -48,43 +65,46 @@ public class Database {
 	
 	public boolean checkUsername(String username) throws SQLException {
 		String checkSQL = "SELECT * FROM usernames WHERE username=?;";
-		PreparedStatement check = conn.prepareStatement(checkSQL);
-		check.setString(1, username);
-		ResultSet result = check.executeQuery();
+		PreparedStatement usernameEntry = conn.prepareStatement(checkSQL);
+		usernameEntry.setString(1, username);
 		
-		if (result.next() && result.getInt(1) > 0) {
-			return true;
-		}
-		
-		return false;
+		ResultSet result = usernameEntry.executeQuery();
+		return result.next() && result.getInt(1) > 0;
 	}
 	
 	public boolean checkPassword(String username, String password) throws SQLException {
 		String checkSQL = "SELECT * FROM usernames WHERE username=? AND password=?;";
-		PreparedStatement check = conn.prepareStatement(checkSQL);
-		check.setString(1, username);
-		check.setString(2, password);
-		ResultSet result = check.executeQuery();
+		PreparedStatement passwordEntry = conn.prepareStatement(checkSQL);
+		passwordEntry.setString(1, username);
+		passwordEntry.setString(2, password);
 		
-		if (result.next() && result.getInt(1) > 0) {
-			return true;
-		}
-		
-		return false;
+		ResultSet result = passwordEntry.executeQuery();
+		return result.next() && result.getInt(1) > 0;
 	}
 	
 	public boolean checkStatus(String username, String status) throws SQLException {
 		String checkSQL = "SELECT * FROM usernames WHERE username=? AND status=?;";
-		PreparedStatement check = conn.prepareStatement(checkSQL);
-		check.setString(1, username);
-		check.setString(2, status);
-		ResultSet result = check.executeQuery();
+		PreparedStatement statusEntry = conn.prepareStatement(checkSQL);
+		statusEntry.setString(1, username);
+		statusEntry.setString(2, status);
 		
-		if (result.next() && result.getInt(1) > 0) {
-			return true;
-		}
+		ResultSet result = statusEntry.executeQuery();
+		return result.next() && result.getInt(1) > 0;
+	}
+	
+	public int getID(String username) throws SQLException {
+		String getSQL = "SELECT id FROM usernames WHERE username=?;";
+		PreparedStatement idEntry = conn.prepareStatement(getSQL);
+		idEntry.setString(1, username);
+		ResultSet result = idEntry.executeQuery();
 		
-		return false;
+		if (result.next()) {
+            int id = result.getInt("id"); 
+            return id;
+        } 
+		else {
+            return -1;
+        }
 	}
 	
 	public void connectionShutdown() {
