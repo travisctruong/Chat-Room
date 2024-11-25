@@ -8,6 +8,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -22,7 +23,6 @@ public class Server implements Runnable {
 	private Server() {
 		connections = new ArrayList<>();    // List of clients
 		database = new Database();
-//		Runtime.getRuntime().addShutdownHook(new Thread(() -> serverShutdown()));
 	}
 
 	@Override
@@ -38,7 +38,6 @@ public class Server implements Runnable {
 				connections.add(handler);
 			}
 		} catch (IOException e) {
-			System.out.println("quit");
 			serverShutdown();
 		} catch (SQLException e) {
 			System.out.println(e.getMessage());
@@ -51,6 +50,28 @@ public class Server implements Runnable {
 				handler.receiveMessage(message);
 			}
 		}
+	}
+	
+	private HashMap<String, Integer> checkOnline() {
+		HashMap<String, Integer> online = new HashMap<>();
+		for (ClientHandler handler : connections) {
+			if (handler.onlineGetter()) {
+				online.put(handler.usernameGetter(), handler.roomGetter());
+			}
+		}
+		return online;
+	}
+	
+	private ArrayList<String> checkInRoom(int roomNum) {
+		ArrayList<String> inRoom = new ArrayList<>();
+		for (ClientHandler handler : connections) {
+			if (handler.roomGetter() == roomNum) {
+				if (handler.onlineGetter()) {
+					inRoom.add(handler.usernameGetter());
+				}
+			}
+		}
+		return inRoom;
 	}
 	
 	private void serverShutdown() {
@@ -73,6 +94,7 @@ public class Server implements Runnable {
 		private PrintWriter out;
 		private int roomNum;
 		private String username;
+		private boolean connected;
 		
 		private ClientHandler(Socket client) {
 			this.client = client;
@@ -94,8 +116,9 @@ public class Server implements Runnable {
 						clientShutdown();
 						return;
 					}
+					HashMap<String, Integer> online = checkOnline();
 					if (database.checkUsername(username)) {
-						if (database.checkStatus(username, "offline")) {
+						if (!online.containsKey(username)) {
 							out.println("\nWelcome back " + username + ", please enter password: ");
 							password = in.readLine();
 							
@@ -137,8 +160,8 @@ public class Server implements Runnable {
 					}
 				}                          
 				
+				connected = true;
 				System.out.println(username + " has connected");
-				database.updateStatus(username, "online");
 				roomNum = 1;
 				broadcast("\n" + username + " has joined!\n", roomNum);
 				out.println("Welcome! Use /help to display list of commands");
@@ -159,7 +182,6 @@ public class Server implements Runnable {
 								out.println("\nPlease confirm password: ");
 								String temp = in.readLine();
 								if (temp.equals("/quit")) {
-									database.updateStatus(username, "offline");
 									clientShutdown();
 									return;
 								}
@@ -194,7 +216,6 @@ public class Server implements Runnable {
 							out.println("\nPlease confirm current password: ");
 							String temp = in.readLine();
 							if (temp.equals("/quit")) {
-								database.updateStatus(username, "offline");
 								clientShutdown();
 								return;
 							}
@@ -215,7 +236,6 @@ public class Server implements Runnable {
 						if (splitMessage.length == 1) {
 							broadcast("\n" + username + " has left the room\n", roomNum);
 							System.out.println(username + " has left the room");
-							database.updateStatus(username, "offline");
 							clientShutdown();
 						}
 						else {
@@ -228,7 +248,7 @@ public class Server implements Runnable {
 							try {
 								int num = Integer.parseInt(splitMessage[1].trim());
 								if (num > 0 && num < 100) {
-									broadcast("\n" + username + " has entered room " + roomNum + "\n", roomNum);
+									broadcast("\n" + username + " has entered room " + num + "\n", roomNum);
 									roomNum = num;
 								}
 								else {
@@ -253,13 +273,43 @@ public class Server implements Runnable {
 						}
 					}
 					
+					else if (splitMessage[0].equals("/inroom")) {
+						if (splitMessage.length == 1) {
+							ArrayList<String> inRoom = checkInRoom(roomNum);
+							out.println("");
+							for (String name : inRoom) {
+								out.println(name);
+							}
+							out.println("");
+						}
+						else {
+							out.println("\nERROR: Too many arguments\n");
+						}
+					}
+					
+					else if (splitMessage[0].equals("/online")) {
+						if (splitMessage.length == 1) {
+							HashMap<String, Integer> online = checkOnline();
+							out.println("");
+							for (String name : online.keySet()) {
+								out.println(name + " is in room " + online.get(name));
+							}
+							out.println("");
+						}
+						else {
+							out.println("\nERROR: Too many arguments\n");
+						}
+					}
+					
 					else if (splitMessage[0].equals("/help")) {
 						if (splitMessage.length == 1) {
 							out.println("\n/username --- USAGE: /username {name}");
 							out.println("/password --- USAGE: /password {password}");
 							out.println("/quit");
 							out.println("/join --- USAGE: /join {room_number}");
-							out.println("/room\n");
+							out.println("/room");
+							out.println("/inroom");
+							out.println("/online\n");
 						}
 						else {
 							out.println("\nERROR: Too many arguments\n");
@@ -287,27 +337,23 @@ public class Server implements Runnable {
 		
 		private void clientShutdown() {
 			try {
+				this.connected = false;
 				in.close();
 				out.close();
 				client.close();
 			} catch (IOException e) {}
 		}
-		
-//		private void clientShutdown() {
-//			try {
-//				try {
-//					database.updateStatus(this.username, "offline");
-//				} catch (SQLException e) {
-//					System.out.println(e.getMessage());
-//				}
-//				in.close();
-//				out.close();
-//				client.close();
-//			} catch (IOException e) {}
-//		}
-//		
+
 		private int roomGetter() {
 			return this.roomNum;
+		}
+		
+		private String usernameGetter() {
+			return this.username;
+		}
+		
+		private boolean onlineGetter() {
+			return this.connected;
 		}
 	}
 	

@@ -24,7 +24,6 @@ public class Database {
 						  "id INTEGER PRIMARY KEY, " +
 						  "username TEXT NOT NULL UNIQUE, " +
 						  "password TEXT NOT NULL, " +
-						  "status TEXT, " +
 						  "creation_time DATETIME DEFAULT CURRENT_TIMESTAMP);";
 		Statement table = conn.createStatement();
 		table.executeUpdate(tableSQL);
@@ -55,14 +54,6 @@ public class Database {
 		passwordEntry.executeUpdate();	
 	}
 	
-	public void updateStatus(String username, String status) throws SQLException {
-		String updateSQL = "UPDATE usernames SET status=? WHERE username=?;";
-		PreparedStatement statusEntry = conn.prepareStatement(updateSQL);
-		statusEntry.setString(1, status);
-		statusEntry.setString(2, username);
-		statusEntry.executeUpdate();	
-	}
-	
 	public boolean checkUsername(String username) throws SQLException {
 		String checkSQL = "SELECT * FROM usernames WHERE username=?;";
 		PreparedStatement usernameEntry = conn.prepareStatement(checkSQL);
@@ -79,16 +70,6 @@ public class Database {
 		passwordEntry.setString(2, password);
 		
 		ResultSet result = passwordEntry.executeQuery();
-		return result.next() && result.getInt(1) > 0;
-	}
-	
-	public boolean checkStatus(String username, String status) throws SQLException {
-		String checkSQL = "SELECT * FROM usernames WHERE username=? AND status=?;";
-		PreparedStatement statusEntry = conn.prepareStatement(checkSQL);
-		statusEntry.setString(1, username);
-		statusEntry.setString(2, status);
-		
-		ResultSet result = statusEntry.executeQuery();
 		return result.next() && result.getInt(1) > 0;
 	}
 	
