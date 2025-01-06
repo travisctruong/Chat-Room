@@ -6,8 +6,9 @@ Chat_Application --> Contains TCP Chat Room classes <br>
 
 How to use:
 1. Clone repository
-2. Run ChatRoomApplication.java
-3. Submit POST request for starting server to localhost (http://localhost:8080/start)
-4. Run Client.java on Command Line or Java IDE
-5. Create username and password
-6. Submit POST request for stopping server to localhost (http://localhost:8080/stop)
+2. Edit IP address on Client.java with own address, or keep loop back address if using to communicate across the same device
+3. Run ChatRoomApplication.java
+4. Submit POST request for starting server to localhost (http://localhost:8080/start)
+5. Run Client.java on Command Line or Java IDE
+6. Create username and password
+7. Submit POST request for stopping server to localhost (http://localhost:8080/stop)
