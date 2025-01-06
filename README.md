@@ -1,7 +1,7 @@
 # Chat-Room
 TCP Chat Room that allows devices to connect to a specific IP address and communicate with each other in real-time. Users can send and receive messages while connected to the server, enabling direct communication between multiple devices on the same network. Contains user authentication, user/chat commands, and chat room selection using SQLite for data storage.
 
-Chat_Application --> Contains TCP Chat Room classes
+Chat_Application --> Contains TCP Chat Room classes <br>
 (Better) chat_room --> TCP Chat Room wrapped in Spring Boot, containing POST requests for starting/stopping server
 
 How to use:
